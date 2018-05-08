@@ -45,7 +45,7 @@ async function remoteCall() {
 
 ## API
 
-#### RequestID.middleware(options?: Options): Application.Middlware
+#### RequestID.middleware(options?: Options): Application.Middleware
 
 ```typescript
 interface Options {

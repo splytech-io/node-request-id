@@ -12,8 +12,9 @@ describe('request-id', () => {
   });
 
   it('should return undefined if middleware was not called', async () => {
-    expect(RequestID.getRequestId()).to.be.undefined;
+    expect(RequestID.getRequestId()).to.equals(undefined);
   });
+
   it('should return same request id in the same async stack trace', async () => {
     const api = new Application()
       .use(RequestID.middleware())
@@ -33,7 +34,7 @@ describe('request-id', () => {
       .get('/')
       .expect(200)
       .then(({ body }) => {
-        expect(RequestID.getRequestId()).to.be.undefined;
+        expect(RequestID.getRequestId()).to.equals(undefined);
         expect(body.length).to.equals(2);
         expect(body[0]).to.equals(body[1]);
       });
@@ -57,7 +58,7 @@ describe('request-id', () => {
   it('should set custom header header', async () => {
     const api = new Application()
       .use(RequestID.middleware({
-        headerName: 'custom-name'
+        headerName: 'custom-name',
       }))
       .use(async (ctx) => {
         ctx.body = null;
@@ -91,7 +92,7 @@ describe('request-id', () => {
   it('should prefix request-id header', async () => {
     const api = new Application()
       .use(RequestID.middleware({
-        prefix: 'test'
+        prefix: 'test',
       }))
       .use(async (ctx) => {
         ctx.body = null;
