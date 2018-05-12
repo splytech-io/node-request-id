@@ -1,6 +1,6 @@
 {
   "name": "@splytech-io/request-id",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Track requests using request-id header between microservices",
   "main": "build/index.js",
   "typings": "build/index.d.ts",

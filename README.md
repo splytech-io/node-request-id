@@ -1,8 +1,10 @@
 # @splytech-io/request-id
 
+# [BUG in node v10](https://github.com/nodejs/node/issues/20274)
+
 Helps to track requests between microservices. 
 
-This library is utilising native `async_hooks` module and only calls `triggerAsyncId()` function to get unique async stacktrace id. This makes sure same RequestID is always returned in the same request context. 
+This library is utilising native `async_hooks` module and only calls `executionAsyncId()` function to get unique async stacktrace id. This makes sure same RequestID is always returned in the same request context.
 
 Request ID's are generated using UUID v4.
 

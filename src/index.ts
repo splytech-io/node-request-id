@@ -2,8 +2,9 @@ import * as asyncHooks from 'async_hooks';
 import { v4 as uuid } from 'uuid';
 
 export namespace RequestID {
-  export const DEFAULT_HEADER_NAME = 'x-request-id';
-  const storage = new Map<number, string>();
+  export interface Storage {
+    requestId: string;
+  }
 
   export interface Options {
     prefix?: string;
@@ -17,12 +18,34 @@ export namespace RequestID {
 
   export type Middleware = (context: any, next: () => Promise<any>) => any;
 
+  export const DEFAULT_HEADER_NAME = 'x-request-id';
+  export const asyncMap = new Map<number, Storage>();
+
+  asyncHooks
+    .createHook({
+      init: (asyncId, _, triggerAsyncId) => {
+        if (asyncMap.has(triggerAsyncId)) {
+          asyncMap.set(asyncId, <any>asyncMap.get(triggerAsyncId));
+        }
+      },
+      destroy(asyncId) {
+        asyncMap.delete(asyncId);
+      },
+    })
+    .enable();
+
   /**
    *
    * @returns {string | undefined}
    */
   export function getRequestId(): string | undefined {
-    return storage.get(asyncHooks.triggerAsyncId());
+    const storage = asyncMap.get(asyncHooks.executionAsyncId());
+
+    if (!storage) {
+      return;
+    }
+
+    return storage.requestId;
   }
 
   /**
@@ -32,15 +55,13 @@ export namespace RequestID {
    */
   export function middleware(options: Options = {}): Middleware {
     return async (ctx: Context, next: Function) => {
-      const id = asyncHooks.triggerAsyncId();
+      const id = asyncHooks.executionAsyncId();
       const requestId = getOrCreateRequestId(ctx, options);
 
-      storage.set(id, requestId);
+      asyncMap.set(id, { requestId });
+      ctx.set(getHeaderName(options), requestId);
 
-      return next().finally(() => {
-        ctx.set(getHeaderName(options), requestId);
-        storage.delete(id);
-      });
+      return next();
     };
   }
 

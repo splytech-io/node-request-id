@@ -11,10 +11,20 @@ describe('request-id', () => {
     sandbox.restore();
   });
 
+  function assertRequestIds(ids: string[]) {
+    expect(ids.length).to.gt(1);
+    expect(ids[0]).to.be.a('string');
+
+    const [id, ...rest] = ids;
+
+    rest.forEach((item, index) => {
+      expect(item).to.equals(id, `index ${index}`);
+    });
+  }
+
   it('should return undefined if middleware was not called', async () => {
     expect(RequestID.getRequestId()).to.equals(undefined);
   });
-
   it('should return same request id in the same async stack trace', async () => {
     const api = new Application()
       .use(RequestID.middleware())
@@ -35,8 +45,53 @@ describe('request-id', () => {
       .expect(200)
       .then(({ body }) => {
         expect(RequestID.getRequestId()).to.equals(undefined);
-        expect(body.length).to.equals(2);
-        expect(body[0]).to.equals(body[1]);
+        assertRequestIds(body);
+      });
+  });
+  it('should return same request id even after async function call', async () => {
+    const api = new Application()
+      .use(RequestID.middleware())
+      .use(async (ctx) => {
+        const id1 = await remoteCall();
+        const id2 = RequestID.getRequestId();
+
+        ctx.body = [id1, id2];
+      })
+      .callback();
+
+    async function remoteCall() {
+      return RequestID.getRequestId();
+    }
+
+    await supertest(api)
+      .get('/')
+      .expect(200)
+      .then(({ body }) => {
+        expect(RequestID.getRequestId()).to.equals(undefined);
+        assertRequestIds(body);
+      });
+  });
+  it('should return same request id even in setTimeout', async () => {
+    const api = new Application()
+      .use(RequestID.middleware())
+      .use(async (ctx) => {
+        const id1 = RequestID.getRequestId();
+        const id2 = await new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(RequestID.getRequestId());
+          }, 10);
+        });
+
+        ctx.body = [id1, id2];
+      })
+      .callback();
+
+    await supertest(api)
+      .get('/')
+      .expect(200)
+      .then(({ body }) => {
+        expect(RequestID.getRequestId()).to.equals(undefined);
+        assertRequestIds(body);
       });
   });
   it('should set request-id header', async () => {
