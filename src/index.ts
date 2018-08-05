@@ -67,6 +67,18 @@ export namespace RequestID {
 
   /**
    *
+   * @param prefix
+   */
+  export function createRequestId(prefix?: string): string {
+    if (prefix) {
+      return `${prefix}-${uuid()}`;
+    }
+
+    return uuid();
+  }
+
+  /**
+   *
    * @param {RequestID.Options} options
    * @returns {string}
    */
@@ -87,11 +99,7 @@ export namespace RequestID {
       return ctx.headers[headerName];
     }
 
-    if (options.prefix) {
-      return `${options.prefix}-${uuid()}`;
-    }
-
-    return uuid();
+    return createRequestId(options.prefix);
   }
 
 }
