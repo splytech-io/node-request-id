@@ -23,13 +23,13 @@ describe('request-id', () => {
   }
 
   it('should return undefined if middleware was not called', async () => {
-    expect(RequestID.getRequestId()).to.equals(undefined);
+    expect(RequestID.getAsyncContextId()).to.equals(undefined);
   });
   it('should return same request id in the same async stack trace', async () => {
     const api = new Application()
       .use(RequestID.middleware())
       .use(async (ctx) => {
-        const id1 = RequestID.getRequestId();
+        const id1 = RequestID.getAsyncContextId();
         const id2 = await remoteCall();
 
         ctx.body = [id1, id2];
@@ -37,14 +37,14 @@ describe('request-id', () => {
       .callback();
 
     async function remoteCall() {
-      return RequestID.getRequestId();
+      return RequestID.getAsyncContextId();
     }
 
     await supertest(api)
       .get('/')
       .expect(200)
       .then(({ body }) => {
-        expect(RequestID.getRequestId()).to.equals(undefined);
+        expect(RequestID.getAsyncContextId()).to.equals(undefined);
         assertRequestIds(body);
       });
   });
@@ -53,21 +53,21 @@ describe('request-id', () => {
       .use(RequestID.middleware())
       .use(async (ctx) => {
         const id1 = await remoteCall();
-        const id2 = RequestID.getRequestId();
+        const id2 = RequestID.getAsyncContextId();
 
         ctx.body = [id1, id2];
       })
       .callback();
 
     async function remoteCall() {
-      return RequestID.getRequestId();
+      return RequestID.getAsyncContextId();
     }
 
     await supertest(api)
       .get('/')
       .expect(200)
       .then(({ body }) => {
-        expect(RequestID.getRequestId()).to.equals(undefined);
+        expect(RequestID.getAsyncContextId()).to.equals(undefined);
         assertRequestIds(body);
       });
   });
@@ -75,10 +75,10 @@ describe('request-id', () => {
     const api = new Application()
       .use(RequestID.middleware())
       .use(async (ctx) => {
-        const id1 = RequestID.getRequestId();
+        const id1 = RequestID.getAsyncContextId();
         const id2 = await new Promise((resolve) => {
           setTimeout(() => {
-            resolve(RequestID.getRequestId());
+            resolve(RequestID.getAsyncContextId());
           }, 10);
         });
 
@@ -90,7 +90,7 @@ describe('request-id', () => {
       .get('/')
       .expect(200)
       .then(({ body }) => {
-        expect(RequestID.getRequestId()).to.equals(undefined);
+        expect(RequestID.getAsyncContextId()).to.equals(undefined);
         assertRequestIds(body);
       });
   });
@@ -160,5 +160,69 @@ describe('request-id', () => {
       .then((response) => {
         expect(response.header['x-request-id']).to.match(/^test-/);
       });
+  });
+
+  describe('.requestId()', async () => {
+    it('should allow to create request-id manually', async () => {
+      const r = RequestID.getOrCreateAsyncContextId();
+
+      expect(r).to.be.a('string');
+    });
+    it('should return the same request-id when calling getRequestId()', async () => {
+      const r1 = RequestID.getOrCreateAsyncContextId();
+      const r2 = RequestID.getAsyncContextId();
+
+      expect(r1).to.be.equals(r2);
+    });
+    it('should return the same request-id when calling RequestID.initRequestId twice', async () => {
+      const r1 = RequestID.getOrCreateAsyncContextId();
+      const r2 = RequestID.getOrCreateAsyncContextId();
+
+      expect(r1).to.be.a('string');
+      expect(r1).to.equals(r2);
+    });
+    it('should generate different request ids in separate contexts', async () => {
+      const r1 = await new Promise((resolve) => {
+        resolve(RequestID.getOrCreateAsyncContextId());
+      });
+      const r2 = await new Promise((resolve) => {
+        resolve(RequestID.getOrCreateAsyncContextId());
+      });
+
+      expect(r1).to.be.a('string');
+      expect(r1).not.to.equals(r2);
+    });
+  });
+
+  describe('storage data', async () => {
+    it('should warn if async context id is not created', async () => {
+      const warn = sinon.stub(console, 'warn');
+      RequestID.setData('one', 'two');
+
+      expect(warn.callCount).to.equals(1);
+    });
+    it('should set value', async () => {
+      RequestID.getOrCreateAsyncContextId();
+      RequestID.setData('one', 'two');
+    });
+    it('should get value', async () => {
+      RequestID.getOrCreateAsyncContextId();
+      RequestID.setData('one', 'two');
+
+      expect(RequestID.getData('one')).to.equals('two');
+    });
+    it('should get whole value', async () => {
+      RequestID.getOrCreateAsyncContextId();
+      RequestID.setData('one', 'two');
+
+      expect(RequestID.getData()).to.deep.equals({
+        one: 'two',
+      });
+    });
+    it('should default to an empty object', async () => {
+      RequestID.getOrCreateAsyncContextId();
+
+      expect(RequestID.getData()).to.deep.equals({});
+    });
   });
 });

@@ -27,7 +27,7 @@ app.use(async () => {
   const result = await remoteCall();
 
   // even in async context RequestID.getRequestId() returns the same value
-  console.assert(result === RequestID.getRequestId());
+  console.assert(result === RequestID.getAsyncContextId());
 });
 
 async function remoteCall() {
@@ -35,12 +35,12 @@ async function remoteCall() {
     headers: {
       // pass request-id to external (microservice) call so external call 
       // can be matched against source request
-      [RequestID.DEFAULT_HEADER_NAME]: RequestID.getRequestId(),
+      [RequestID.DEFAULT_HEADER_NAME]: RequestID.getAsyncContextId(),
     },
   });
 
   // for demonstration purposes
-  return RequestID.getRequestId();
+  return RequestID.getAsyncContextId();
 }
 
 ```
