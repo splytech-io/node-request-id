@@ -177,16 +177,6 @@ describe('request-id', () => {
       });
   });
   it('should create context within a function', async () => {
-    const run = async () => {
-      const one = RequestID.getOrCreateAsyncContextId('test');
-
-      const two = await fn2();
-
-      const three = RequestID.getAsyncContextId();
-
-      return [one, two, three];
-    };
-
     const fn2 = async () => {
       return new Promise((resolve) => {
         setImmediate(() => {
@@ -197,9 +187,19 @@ describe('request-id', () => {
       });
     };
 
-    const result: any = await new Promise((resolve) => {
+    const run = async () => {
+      const one = RequestID.getOrCreateAsyncContextId('test');
+
+      const two = await fn2();
+
+      const three = RequestID.getAsyncContextId();
+
+      return [one, two, three];
+    };
+
+    const result: any = await new Promise((resolve, reject) => {
       setTimeout(() => {
-        run().then(resolve);
+        run().then(resolve, reject);
       }, 0);
     });
 
