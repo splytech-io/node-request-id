@@ -9,7 +9,6 @@ export namespace RequestID {
 
   export interface Options {
     prefix?: string;
-    headerName?: string;
   }
 
   export interface Context {
@@ -21,7 +20,8 @@ export namespace RequestID {
 
   // - init asyncHooks only if it's not already initialised
   const shouldInitAsyncHooks = !(<any>global).__requestIDMap;
-  export const DEFAULT_HEADER_NAME = 'x-request-id';
+  export const REQUEST_ID_HEADER_NAME = 'x-request-id';
+  export const REQUEST_HOP_HEADER_NAME = 'x-request-hop';
 
   // - store Map globally across all instances of RequestID
   export const asyncMap: Map<number, Storage> = (<any>global).__requestIDMap =
@@ -61,7 +61,7 @@ export namespace RequestID {
    * @param {string} key
    * @param value
    */
-  export function setData(key: string, value: any) {
+  export function setData<T>(key: string, value: T) {
     const storage = asyncMap.get(asyncHooks.executionAsyncId());
 
     if (!storage) {
@@ -78,7 +78,7 @@ export namespace RequestID {
    * @param {string} key
    * @returns {any}
    */
-  export function getData(key?: string) {
+  export function getData<T>(key?: string): T | undefined {
     const storage = asyncMap.get(asyncHooks.executionAsyncId());
 
     if (!storage) {
@@ -109,7 +109,8 @@ export namespace RequestID {
       const asyncContextId = getRequestIdFromHeadersOrCreate(ctx, options);
 
       asyncMap.set(id, { requestId: asyncContextId, data: {} });
-      ctx.set(getHeaderName(options), asyncContextId);
+      ctx.set(REQUEST_ID_HEADER_NAME, asyncContextId);
+      ctx.set(REQUEST_HOP_HEADER_NAME, (Number(ctx.headers[REQUEST_HOP_HEADER_NAME] || '-1') + 1).toString());
 
       return next();
     };
@@ -147,24 +148,13 @@ export namespace RequestID {
 
   /**
    *
-   * @param {RequestID.Options} options
-   * @returns {string}
-   */
-  function getHeaderName(options: Options): string {
-    return options.headerName || DEFAULT_HEADER_NAME;
-  }
-
-  /**
-   *
    * @param {Context} ctx
    * @param {RequestID.Options} options
    * @returns {string}
    */
   function getRequestIdFromHeadersOrCreate(ctx: Context, options: Options): string {
-    const headerName = getHeaderName(options);
-
-    if (ctx.headers[headerName]) {
-      return ctx.headers[headerName];
+    if (ctx.headers[REQUEST_ID_HEADER_NAME]) {
+      return ctx.headers[REQUEST_ID_HEADER_NAME];
     }
 
     return createUUID(options.prefix);

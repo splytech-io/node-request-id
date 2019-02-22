@@ -18,7 +18,7 @@ describe('request-id', () => {
     const [id, ...rest] = ids;
 
     rest.forEach((item, index) => {
-      expect(item).to.equals(id, `index ${index}`);
+      expect(item).to.equals(id, `index ${ index }`);
     });
   }
 
@@ -110,24 +110,6 @@ describe('request-id', () => {
         expect(response.header['x-request-id']).to.be.a('string');
       });
   });
-  it('should set custom header header', async () => {
-    const api = new Application()
-      .use(RequestID.middleware({
-        headerName: 'custom-name',
-      }))
-      .use(async (ctx) => {
-        ctx.body = null;
-      })
-      .callback();
-
-    await supertest(api)
-      .get('/')
-      .expect(204)
-      .then((response) => {
-        expect(response.header).to.contain.keys(['custom-name']);
-        expect(response.header['custom-name']).to.be.a('string');
-      });
-  });
   it('should keep passed request-id', async () => {
     const api = new Application()
       .use(RequestID.middleware({}))
@@ -142,6 +124,39 @@ describe('request-id', () => {
       .expect(204)
       .then((response) => {
         expect(response.header['x-request-id']).to.be.equals('value');
+      });
+  });
+  it('should set hop header', async () => {
+    const api = new Application()
+      .use(RequestID.middleware({}))
+      .use(async (ctx) => {
+        ctx.body = null;
+      })
+      .callback();
+
+    await supertest(api)
+      .get('/')
+      .set('X-Request-ID', 'value')
+      .expect(204)
+      .then((response) => {
+        expect(response.header['x-request-hop']).to.be.equals('0');
+      });
+  });
+  it('should increate hop number', async () => {
+    const api = new Application()
+      .use(RequestID.middleware({}))
+      .use(async (ctx) => {
+        ctx.body = null;
+      })
+      .callback();
+
+    await supertest(api)
+      .get('/')
+      .set('X-Request-ID', 'value')
+      .set('X-Request-hop', '1')
+      .expect(204)
+      .then((response) => {
+        expect(response.header['x-request-hop']).to.be.equals('2');
       });
   });
   it('should prefix request-id header', async () => {
@@ -160,6 +175,37 @@ describe('request-id', () => {
       .then((response) => {
         expect(response.header['x-request-id']).to.match(/^test-/);
       });
+  });
+  it('should create context within a function', async () => {
+    const run = async () => {
+      const one = RequestID.getOrCreateAsyncContextId('test');
+
+      const two = await fn2();
+
+      const three = RequestID.getAsyncContextId();
+
+      return [one, two, three];
+    };
+
+    const fn2 = async () => {
+      return new Promise((resolve) => {
+        setImmediate(() => {
+          process.nextTick(() => {
+            resolve(RequestID.getAsyncContextId());
+          });
+        });
+      });
+    };
+
+    const result: any = await new Promise((resolve) => {
+      setTimeout(() => {
+        run().then(resolve);
+      }, 0);
+    });
+
+    result.reduce((a: any, b: any) => {
+      expect(a).to.equals(b);
+    });
   });
 
   describe('.requestId()', async () => {
