@@ -2,9 +2,10 @@ import * as asyncHooks from 'async_hooks';
 import { v4 as uuid } from 'uuid';
 
 export namespace RequestID {
-  export interface Storage {
+  export interface Storage<T> {
     requestId: string;
-    data: any;
+    hop: number;
+    data: T;
   }
 
   export interface Options {
@@ -24,8 +25,8 @@ export namespace RequestID {
   export const REQUEST_HOP_HEADER_NAME = 'x-request-hop';
 
   // - store Map globally across all instances of RequestID
-  export const asyncMap: Map<number, Storage> = (<any>global).__requestIDMap =
-    (<any>global).__requestIDMap || new Map<number, Storage>();
+  export const asyncMap: Map<number, Storage<any>> = (<any>global).__requestIDMap =
+    (<any>global).__requestIDMap || new Map<number, Storage<any>>();
 
   if (shouldInitAsyncHooks) {
     asyncHooks
@@ -107,10 +108,11 @@ export namespace RequestID {
     return async (ctx: Context, next: Function) => {
       const id = asyncHooks.executionAsyncId();
       const asyncContextId = getRequestIdFromHeadersOrCreate(ctx, options);
+      const hop = Number(ctx.headers[REQUEST_HOP_HEADER_NAME]) || 0;
 
-      asyncMap.set(id, { requestId: asyncContextId, data: {} });
+      asyncMap.set(id, { requestId: asyncContextId, hop, data: {} });
       ctx.set(REQUEST_ID_HEADER_NAME, asyncContextId);
-      ctx.set(REQUEST_HOP_HEADER_NAME, (Number(ctx.headers[REQUEST_HOP_HEADER_NAME] || '-1') + 1).toString());
+      ctx.set(REQUEST_HOP_HEADER_NAME, hop.toString());
 
       return next();
     };
@@ -129,9 +131,23 @@ export namespace RequestID {
     }
 
     const newAsyncContextId = createUUID(prefix);
-    asyncMap.set(asyncHooks.executionAsyncId(), { requestId: newAsyncContextId, data: {} });
+    asyncMap.set(asyncHooks.executionAsyncId(), { requestId: newAsyncContextId, hop: 0, data: {} });
 
     return newAsyncContextId;
+  }
+
+  /**
+   *
+   * @returns {number}
+   */
+  export function getHop(): number {
+    const storage = asyncMap.get(asyncHooks.executionAsyncId());
+
+    if (!storage) {
+      return -1;
+    }
+
+    return storage.hop;
   }
 
   /**

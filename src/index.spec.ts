@@ -156,7 +156,7 @@ describe('request-id', () => {
       .set('X-Request-hop', '1')
       .expect(204)
       .then((response) => {
-        expect(response.header['x-request-hop']).to.be.equals('2');
+        expect(response.header['x-request-hop']).to.be.equals('1');
       });
   });
   it('should prefix request-id header', async () => {
