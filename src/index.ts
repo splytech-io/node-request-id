@@ -2,9 +2,14 @@ import * as asyncHooks from 'async_hooks';
 import { v4 as uuid } from 'uuid';
 
 export namespace RequestID {
-  export interface Storage<T> {
-    requestId: string;
+  export interface Metadata {
     hop: number;
+    session?: string;
+    sessionGroup?: string;
+  }
+
+  export interface Storage<T> extends Metadata {
+    requestId: string;
     data: T;
   }
 
@@ -23,6 +28,8 @@ export namespace RequestID {
   const shouldInitAsyncHooks = !(<any>global).__requestIDMap;
   export const REQUEST_ID_HEADER_NAME = 'x-request-id';
   export const REQUEST_HOP_HEADER_NAME = 'x-request-hop';
+  export const REQUEST_SESSION_ID_HEADER_NAME = 'x-request-session-id';
+  export const REQUEST_SESSION_GROUP_ID_HEADER_NAME = 'x-request-session-group-id';
 
   // - store Map globally across all instances of RequestID
   export const asyncMap: Map<number, Storage<any>> = (<any>global).__requestIDMap =
@@ -110,9 +117,18 @@ export namespace RequestID {
       const asyncContextId = getRequestIdFromHeadersOrCreate(ctx, options);
       const hop = Number(ctx.headers[REQUEST_HOP_HEADER_NAME]) || 0;
 
-      asyncMap.set(id, { requestId: asyncContextId, hop, data: {} });
+      asyncMap.set(id, {
+        requestId: asyncContextId,
+        hop,
+        session: ctx.headers[REQUEST_SESSION_ID_HEADER_NAME],
+        sessionGroup: ctx.headers[REQUEST_SESSION_GROUP_ID_HEADER_NAME],
+        data: {},
+      });
+
       ctx.set(REQUEST_ID_HEADER_NAME, asyncContextId);
       ctx.set(REQUEST_HOP_HEADER_NAME, hop.toString());
+      ctx.set(REQUEST_SESSION_GROUP_ID_HEADER_NAME, ctx.headers[REQUEST_SESSION_GROUP_ID_HEADER_NAME]);
+      ctx.set(REQUEST_SESSION_ID_HEADER_NAME, ctx.headers[REQUEST_SESSION_ID_HEADER_NAME]);
 
       return next();
     };
@@ -131,7 +147,11 @@ export namespace RequestID {
     }
 
     const newAsyncContextId = createUUID(prefix);
-    asyncMap.set(asyncHooks.executionAsyncId(), { requestId: newAsyncContextId, hop: 0, data: {} });
+    asyncMap.set(asyncHooks.executionAsyncId(), {
+      requestId: newAsyncContextId,
+      hop: 0,
+      data: {},
+    });
 
     return newAsyncContextId;
   }
@@ -152,11 +172,29 @@ export namespace RequestID {
 
   /**
    *
+   * @returns {RequestID.Metadata | null}
+   */
+  export function getMetadata(): Metadata | null {
+    const storage = asyncMap.get(asyncHooks.executionAsyncId());
+
+    if (!storage) {
+      return null;
+    }
+
+    return {
+      hop: storage.hop,
+      session: storage.session,
+      sessionGroup: storage.sessionGroup,
+    };
+  }
+
+  /**
+   *
    * @param prefix
    */
   export function createUUID(prefix?: string): string {
     if (prefix) {
-      return `${prefix}-${uuid()}`;
+      return `${ prefix }-${ uuid() }`;
     }
 
     return uuid();
