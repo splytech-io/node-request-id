@@ -190,6 +190,28 @@ export namespace RequestID {
 
   /**
    *
+   * @returns {object}
+   */
+  export function toRequestHeaders(): { [key: string]: string | number | undefined } {
+    const storage = asyncMap.get(asyncHooks.executionAsyncId());
+
+    if (!storage) {
+      return {
+        [REQUEST_ID_HEADER_NAME]: getAsyncContextId(),
+        [REQUEST_HOP_HEADER_NAME]: 1,
+      };
+    }
+
+    return {
+      [REQUEST_ID_HEADER_NAME]: getAsyncContextId(),
+      [REQUEST_HOP_HEADER_NAME]: (storage.hop || 0) + 1,
+      [REQUEST_SESSION_GROUP_ID_HEADER_NAME]: storage.sessionGroup,
+      [REQUEST_SESSION_ID_HEADER_NAME]: storage.session,
+    };
+  }
+
+  /**
+   *
    * @param prefix
    */
   export function createUUID(prefix?: string): string {
