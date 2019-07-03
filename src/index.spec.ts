@@ -205,6 +205,8 @@ describe('request-id', () => {
 
     result.reduce((a: any, b: any) => {
       expect(a).to.equals(b);
+
+      return a;
     });
   });
 
