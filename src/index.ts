@@ -1,4 +1,5 @@
 import * as asyncHooks from 'async_hooks';
+import * as http2 from 'http2';
 import { v4 as uuid } from 'uuid';
 
 export namespace RequestID {
@@ -131,6 +132,27 @@ export namespace RequestID {
       ctx.set(REQUEST_SESSION_ID_HEADER_NAME, ctx.headers[REQUEST_SESSION_ID_HEADER_NAME]);
 
       return next();
+    };
+  }
+
+  /**
+   *
+   * @param {string} prefix
+   * @returns {(request: any, send: Function) => Promise<never>}
+   */
+  export function http2ClientMiddleware(prefix?: string) {
+    return async (request: { headers: http2.OutgoingHttpHeaders }, send: Function) => {
+      request.headers[REQUEST_ID_HEADER_NAME] = getOrCreateAsyncContextId(prefix);
+
+      const metadata = getMetadata();
+
+      if (metadata) {
+        request.headers[REQUEST_HOP_HEADER_NAME] = metadata.hop;
+        request.headers[REQUEST_SESSION_ID_HEADER_NAME] = metadata.session;
+        request.headers[REQUEST_SESSION_GROUP_ID_HEADER_NAME] = metadata.sessionGroup;
+      }
+
+      return send();
     };
   }
 
