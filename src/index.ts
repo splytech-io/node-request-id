@@ -180,6 +180,19 @@ export namespace RequestID {
 
   /**
    *
+   * @param {string} id
+   * @param hop
+   */
+  export function setAsyncContextId(id: string, hop = 0) {
+    asyncMap.set(asyncHooks.executionAsyncId(), {
+      requestId: id,
+      hop: hop,
+      data: {},
+    });
+  }
+
+  /**
+   *
    * @returns {number}
    */
   export function getHop(): number {
