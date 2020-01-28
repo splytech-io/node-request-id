@@ -1,6 +1,6 @@
 {
   "name": "@splytech-io/request-id",
-  "version": "2.1.6",
+  "version": "2.1.7",
   "description": "Track requests using request-id header between microservices",
   "main": "build/index.js",
   "typings": "build/index.d.ts",
@@ -22,6 +22,7 @@
   "author": "Andrius Skerla",
   "license": "Apache-2.0",
   "dependencies": {
+    "@splytech-io/utils": "^3.6.1",
     "uuid": "^3.3.2"
   },
   "devDependencies": {

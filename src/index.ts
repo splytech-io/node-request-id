@@ -1,3 +1,4 @@
+import { Utils } from '@splytech-io/utils';
 import * as asyncHooks from 'async_hooks';
 import * as http2 from 'http2';
 import { v4 as uuid } from 'uuid';
@@ -128,8 +129,14 @@ export namespace RequestID {
 
       ctx.set(REQUEST_ID_HEADER_NAME, asyncContextId);
       ctx.set(REQUEST_HOP_HEADER_NAME, hop.toString());
-      ctx.set(REQUEST_SESSION_GROUP_ID_HEADER_NAME, ctx.headers[REQUEST_SESSION_GROUP_ID_HEADER_NAME]);
-      ctx.set(REQUEST_SESSION_ID_HEADER_NAME, ctx.headers[REQUEST_SESSION_ID_HEADER_NAME]);
+
+      if (ctx.headers[REQUEST_SESSION_GROUP_ID_HEADER_NAME]) {
+        ctx.set(REQUEST_SESSION_GROUP_ID_HEADER_NAME, ctx.headers[REQUEST_SESSION_GROUP_ID_HEADER_NAME]);
+      }
+
+      if (ctx.headers[REQUEST_SESSION_ID_HEADER_NAME]) {
+        ctx.set(REQUEST_SESSION_ID_HEADER_NAME, ctx.headers[REQUEST_SESSION_ID_HEADER_NAME]);
+      }
 
       return next();
     };
@@ -237,12 +244,12 @@ export namespace RequestID {
       };
     }
 
-    return {
+    return Utils.cleanupObject({
       [REQUEST_ID_HEADER_NAME]: getAsyncContextId(),
       [REQUEST_HOP_HEADER_NAME]: (storage.hop || 0) + 1,
       [REQUEST_SESSION_GROUP_ID_HEADER_NAME]: storage.sessionGroup,
       [REQUEST_SESSION_ID_HEADER_NAME]: storage.session,
-    };
+    });
   }
 
   /**
