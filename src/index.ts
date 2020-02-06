@@ -154,7 +154,7 @@ export namespace RequestID {
       const metadata = getMetadata();
 
       if (metadata) {
-        request.headers[REQUEST_HOP_HEADER_NAME] = metadata.hop;
+        request.headers[REQUEST_HOP_HEADER_NAME] = `${ metadata.hop }`;
         request.headers[REQUEST_SESSION_ID_HEADER_NAME] = metadata.session;
         request.headers[REQUEST_SESSION_GROUP_ID_HEADER_NAME] = metadata.sessionGroup;
       }
@@ -240,13 +240,13 @@ export namespace RequestID {
     if (!storage) {
       return {
         [REQUEST_ID_HEADER_NAME]: getAsyncContextId(),
-        [REQUEST_HOP_HEADER_NAME]: 1,
+        [REQUEST_HOP_HEADER_NAME]: '1',
       };
     }
 
     return Utils.cleanupObject({
       [REQUEST_ID_HEADER_NAME]: getAsyncContextId(),
-      [REQUEST_HOP_HEADER_NAME]: (storage.hop || 0) + 1,
+      [REQUEST_HOP_HEADER_NAME]: `${ (storage.hop || 0) + 1 }`,
       [REQUEST_SESSION_GROUP_ID_HEADER_NAME]: storage.sessionGroup,
       [REQUEST_SESSION_ID_HEADER_NAME]: storage.session,
     });
