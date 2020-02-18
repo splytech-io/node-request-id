@@ -239,7 +239,7 @@ export namespace RequestID {
 
     if (!storage) {
       return {
-        [REQUEST_ID_HEADER_NAME]: getAsyncContextId(),
+        [REQUEST_ID_HEADER_NAME]: getOrCreateAsyncContextId(),
         [REQUEST_HOP_HEADER_NAME]: '1',
       };
     }
